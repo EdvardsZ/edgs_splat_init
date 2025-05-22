@@ -178,8 +178,6 @@ def get_roma_triangulated_points(
             proj_matrices_A = full_proj_transform
             proj_matrices_B = full_proj_transforms_closest[NN_idx]
 
-            print("test")
-
             triangulated_points, triangulated_points_errors_proj1, triangulated_points_errors_proj2 = triangulate_points(
                 P1=torch.stack([proj_matrices_A] * matches_per_reference, dim=0),
                 P2=torch.stack([proj_matrices_B] * matches_per_reference, dim=0),

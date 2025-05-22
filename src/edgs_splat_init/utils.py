@@ -11,6 +11,8 @@ from .corr_init import aggregate_confidences_and_warps, extract_keypoints_and_co
 from tqdm import tqdm
 
 class Frame(TypedDict):
+    img_w: int
+    img_h: int
     K: Float[Tensor, "3 3"] # camera intrinsic matrix
     C2W: Float[Tensor, "4 4"] # camera to world transform matrix
     img: Float[Tensor, "3 H W"] | Path # the image or the path to the image
@@ -109,13 +111,8 @@ def get_roma_triangulated_points(
     ):
     
     def get_full_proj_transform(frame: Frame, img_w: int, img_h: int):
-        camera_params = {
-            "fx": frame["K"][0, 0],
-            "fy": frame["K"][1, 1],
-            "img_w": img_w,
-            "img_h": img_h
-        }
-        projection_matrix = getProjectionMatrix(camera_params["fx"], camera_params["fy"], camera_params["img_w"], camera_params["img_h"]).T
+
+        projection_matrix = getProjectionMatrix(frame["K"][0, 0], frame["K"][1, 1], frame["image_width"], frame["image_height"]).T
         frame_c2w = np.array(frame["C2W"])
         frame_w2c = np.float32(np.linalg.inv(frame_c2w)).T
         frame_w2c = torch.from_numpy(frame_w2c).float()
@@ -124,8 +121,8 @@ def get_roma_triangulated_points(
     imgA = source_frame["img"] if isinstance(source_frame["img"], torch.Tensor) else load_image(source_frame["img"])
     closest_images = [frame["img"] if isinstance(frame["img"], torch.Tensor) else load_image(frame["img"]) for frame in target_frames]
     
-    full_proj_transform = get_full_proj_transform(source_frame, imgA.shape[1], imgA.shape[2])
-    full_proj_transforms_closest = [get_full_proj_transform(frame, img.shape[1], img.shape[2]) for frame, img in zip(target_frames, closest_images)]
+    full_proj_transform = get_full_proj_transform(source_frame, imgA.shape[1], imgA.shape[0])
+    full_proj_transforms_closest = [get_full_proj_transform(frame, img.shape[1], img.shape[0]) for frame, img in zip(target_frames, closest_images)]
 
     with torch.no_grad():
         certainties_max, warps_max, certainties_max_idcs, imA, imB_compound, certainties_all, warps_all = aggregate_confidences_and_warps(

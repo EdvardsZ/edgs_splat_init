@@ -38,12 +38,14 @@ def dense_splat_init(
     """
 
     if roma_model == "roma_outdoor":
-        roma_model = roma_outdoor(device=device)
+        model = roma_outdoor(device=device)
     else:
-        roma_model = roma_indoor(device=device)
-    roma_model.upsample_preds = False
-    roma_model.symmetric = False
-    upper_threshold = roma_model.sample_thresh
+        model = roma_indoor(device=device)
+
+
+    model.upsample_preds = False
+    model.symmetric = False
+    upper_threshold = model.sample_thresh
     expansion_factor = 1
     keypoint_fit_error_tolerance = 0.01
 
@@ -65,7 +67,7 @@ def dense_splat_init(
     all_new_rotation = []
 
     for source_idx in tqdm(sorted(selected_indices)):
-                # if source_idx > 10:
+        # if source_idx > 10:
         #     break
         frame: Frame = frames[source_idx]
 
@@ -81,7 +83,7 @@ def dense_splat_init(
         new_xyz, filtered_colors = get_roma_triangulated_points(
             frame,
             closest_frames,
-            roma_model,
+            model, # type: ignore
             expansion_factor,
             matches_per_reference,
             keypoint_fit_error_tolerance

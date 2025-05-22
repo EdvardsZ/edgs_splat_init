@@ -1,1 +1,1 @@
-Implements gaussian splat dense initialization from EDGS: https://arxiv.org/pdf/2504.13204
+Implements gaussian splat dense initialization from EDGS: https://arxiv.org/pdf/2504.13204, packed neatly as python package.

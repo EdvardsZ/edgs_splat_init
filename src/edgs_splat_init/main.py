@@ -4,8 +4,8 @@ import torch
 import numpy as np
 from typing import TypedDict
 from pathlib import Path
-from corr_init import select_cameras_kmeans, k_closest_vectors
-from utils import GaussParamsDict, get_triangulated_points_as_gaussians, Frame, get_roma_triangulated_points
+from .corr_init import select_cameras_kmeans, k_closest_vectors
+from .utils import GaussParamsDict, get_triangulated_points_as_gaussians, Frame, get_roma_triangulated_points
 from romatch import roma_outdoor, roma_indoor
 from tqdm import tqdm
 
@@ -67,9 +67,9 @@ def dense_splat_init(
     for source_idx in tqdm(sorted(selected_indices)):
                 # if source_idx > 10:
         #     break
-        frame = frames[source_idx]
+        frame: Frame = frames[source_idx]
 
-        frame_c2w = np.array(frame.transform_matrix)
+        frame_c2w = np.array(frame["C2W"])
         frame_w2c = np.linalg.inv(frame_c2w).T
         frame_w2c = torch.from_numpy(frame_w2c).float()
         camera_center = frame_w2c.inverse()[3, :3]
@@ -97,6 +97,21 @@ def dense_splat_init(
             all_new_scaling.append(gauss_params["scales"])
             all_new_rotation.append(gauss_params["quats"])
 
+    all_new_xyz = torch.cat(all_new_xyz, dim=0)
+    all_new_features_dc = torch.cat(all_new_features_dc, dim=0)
+    all_new_features_rest = torch.cat(all_new_features_rest, dim=0)
+    all_new_opacities = torch.cat(all_new_opacities, dim=0)
+    all_new_scaling = torch.cat(all_new_scaling, dim=0)
+    all_new_rotation = torch.cat(all_new_rotation, dim=0)
+    
+    return GaussParamsDict(
+        means=all_new_xyz,
+        features_dc=all_new_features_dc,
+        features_rest=all_new_features_rest,
+        opacities=all_new_opacities,
+        scales=all_new_scaling,
+        quats=all_new_rotation
+    )
 
     
 

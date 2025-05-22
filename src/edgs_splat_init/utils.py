@@ -7,22 +7,13 @@ import math
 from pathlib import Path
 from typing import Optional, Tuple, Union
 from torchvision.io import decode_jpeg, read_file
-from corr_init import aggregate_confidences_and_warps, extract_keypoints_and_colors, select_best_keypoints, triangulate_points
+from .corr_init import aggregate_confidences_and_warps, extract_keypoints_and_colors, select_best_keypoints, triangulate_points
 from tqdm import tqdm
 
 class Frame(TypedDict):
     K: Float[Tensor, "3 3"] # camera intrinsic matrix
     C2W: Float[Tensor, "4 4"] # camera to world transform matrix
     img: Float[Tensor, "3 H W"] | Path # the image or the path to the image
-
-    def get_camera_params(self):
-        return {
-            "fx": self["K"][0, 0],
-            "fy": self["K"][1, 1],
-            "img_w": self["img"].shape[1],
-            "img_h": self["img"].shape[2]
-        }
-
 
 class GaussParamsDict(TypedDict):
     means: Float[torch.Tensor, "N 3"]
@@ -117,19 +108,24 @@ def get_roma_triangulated_points(
         keypoint_fit_error_tolerance: float = 0.01
     ):
     
-    def get_full_proj_transform(frame: Frame):
-        camera_params = frame.get_camera_params()
+    def get_full_proj_transform(frame: Frame, img_w: int, img_h: int):
+        camera_params = {
+            "fx": frame["K"][0, 0],
+            "fy": frame["K"][1, 1],
+            "img_w": img_w,
+            "img_h": img_h
+        }
         projection_matrix = getProjectionMatrix(camera_params["fx"], camera_params["fy"], camera_params["img_w"], camera_params["img_h"]).T
-        frame_c2w = np.array(frame.transform_matrix)
+        frame_c2w = np.array(frame["C2W"])
         frame_w2c = np.float32(np.linalg.inv(frame_c2w)).T
         frame_w2c = torch.from_numpy(frame_w2c).float()
         return frame_w2c @ projection_matrix
     
-    full_proj_transform = get_full_proj_transform(source_frame)
-    full_proj_transforms_closest = [get_full_proj_transform(frame) for frame in target_frames]
-
     imgA = source_frame["img"] if isinstance(source_frame["img"], torch.Tensor) else load_image(source_frame["img"])
     closest_images = [frame["img"] if isinstance(frame["img"], torch.Tensor) else load_image(frame["img"]) for frame in target_frames]
+    
+    full_proj_transform = get_full_proj_transform(source_frame, imgA.shape[1], imgA.shape[2])
+    full_proj_transforms_closest = [get_full_proj_transform(frame, img.shape[1], img.shape[2]) for frame, img in zip(target_frames, closest_images)]
 
     with torch.no_grad():
         certainties_max, warps_max, certainties_max_idcs, imA, imB_compound, certainties_all, warps_all = aggregate_confidences_and_warps(

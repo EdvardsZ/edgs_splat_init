@@ -56,12 +56,11 @@ def RGB2SH(rgb):
     C0 = 0.28209479177387814
     return (rgb - 0.5) / C0
 
-def get_triangulated_points_as_gaussians(new_xyz: Float[Tensor, "N 3"], colors: Int[np.ndarray, "N 3"], camera_center: Float[Tensor, "3"], sh_degree: int, device = "cuda") -> GaussParamsDict:
+def get_triangulated_points_as_gaussians(new_xyz: Float[Tensor, "N 3"], colors: Int[np.ndarray, "N 3"], camera_center: Float[Tensor, "3"], sh_degree: int, scaling_factor: float = 0.001, device = "cuda") -> GaussParamsDict:
     feature_rest_dim = (3 * ((sh_degree + 1)**2 - 1))
     N = len(new_xyz)
     dist_points_to_cam1 = torch.linalg.norm(camera_center.clone().detach().to(device) - new_xyz.to(device),
                                                 dim=1, ord=2)
-    scaling_factor = 0.001
     gauss_params = GaussParamsDict(
         means=new_xyz.to(device),
         features_dc = RGB2SH(torch.tensor(colors.astype(np.float32) / 255.)).to(device),
@@ -109,10 +108,14 @@ def load_image(image_path: Union[Path, str]) -> Float[Tensor, "3 W H"]:
     img_tensor = decode_jpeg(data)
     return img_tensor  # type: ignore
 
-def get_roma_triangulated_points(source_frame: Frame, target_frames: list[Frame], roma_model):
-    expansion_factor = 1
-    matches_per_reference = 20_000
-    keypoint_fit_error_tolerance = 0.01
+def get_roma_triangulated_points(
+        source_frame: Frame,
+        target_frames: list[Frame],
+        roma_model,
+        expansion_factor: int = 1,
+        matches_per_reference: int = 20_000,
+        keypoint_fit_error_tolerance: float = 0.01
+    ):
     
     def get_full_proj_transform(frame: Frame):
         camera_params = frame.get_camera_params()

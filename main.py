@@ -78,10 +78,17 @@ def dense_splat_init(
 
         closest_frames = [frames[i] for i in closest_indices_selected[source_idx]]
 
-        new_xyz, filtered_colors = get_roma_triangulated_points(frame, closest_frames, roma_model)    
+        new_xyz, filtered_colors = get_roma_triangulated_points(
+            frame,
+            closest_frames,
+            roma_model,
+            expansion_factor,
+            matches_per_reference,
+            keypoint_fit_error_tolerance
+        )    
         # 4. Save as gaussians
         with torch.no_grad():   
-            gauss_params = get_triangulated_points_as_gaussians(new_xyz, filtered_colors, camera_center, sh_degree)
+            gauss_params = get_triangulated_points_as_gaussians(new_xyz, filtered_colors, camera_center, sh_degree, scaling_factor)
 
             all_new_xyz.append(gauss_params["means"])
             all_new_features_dc.append(gauss_params["features_dc"])

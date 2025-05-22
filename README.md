@@ -1,0 +1,1 @@
+Implements gaussian splat dense initialization from EDGS: https://arxiv.org/pdf/2504.13204
